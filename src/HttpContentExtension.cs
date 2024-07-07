@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Soenneker.Extensions.Stream;
 using Soenneker.Extensions.Task;
 
 namespace Soenneker.Extensions.HttpContent;
@@ -12,15 +14,15 @@ namespace Soenneker.Extensions.HttpContent;
 /// </summary>
 public static class HttpContentExtension
 {
-    public static async ValueTask<System.Net.Http.HttpContent> Clone(this System.Net.Http.HttpContent content)
+    public static async ValueTask<System.Net.Http.HttpContent?> Clone(this System.Net.Http.HttpContent? content, CancellationToken cancellationToken = default)
     {
         if (content == null)
             return null;
 
         var ms = new System.IO.MemoryStream();
 
-        await content.CopyToAsync(ms).NoSync();
-        ms.Position = 0;
+        await content.CopyToAsync(ms, cancellationToken).NoSync();
+        ms.ToStart();
 
         var result = new StreamContent(ms);
 
