@@ -14,6 +14,25 @@ namespace Soenneker.Extensions.HttpContent;
 /// </summary>
 public static class HttpContentExtension
 {
+    /// <summary>
+    /// Clones the specified <see cref="System.Net.Http.HttpContent"/> instance asynchronously.
+    /// </summary>
+    /// <param name="content">The <see cref="System.Net.Http.HttpContent"/> instance to clone.</param>
+    /// <param name="cancellationToken">
+    /// A <see cref="CancellationToken"/> to observe while waiting for the task to complete.
+    /// The default value is <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation,
+    /// with a result of the cloned <see cref="System.Net.Http.HttpContent"/> instance, or <c>null</c> if the input content was <c>null</c>.
+    /// </returns>
+    /// <remarks>
+    /// This method creates a deep copy of the provided <see cref="System.Net.Http.HttpContent"/> instance,
+    /// including its headers, by copying the content to a memory stream and then creating a new <see cref="System.Net.Http.StreamContent"/> instance.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">
+    /// The task was canceled.
+    /// </exception>
     public static async ValueTask<System.Net.Http.HttpContent?> Clone(this System.Net.Http.HttpContent? content, CancellationToken cancellationToken = default)
     {
         if (content == null)
