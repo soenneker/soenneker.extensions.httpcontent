@@ -28,7 +28,7 @@ public static class HttpContentExtension
     /// </returns>
     /// <remarks>
     /// This method creates a deep copy of the provided <see cref="System.Net.Http.HttpContent"/> instance,
-    /// including its headers, by copying the content to a memory stream and then creating a new <see cref="System.Net.Http.StreamContent"/> instance.
+    /// including its headers, by copying the content to a memory stream and then creating a new <see cref="StreamContent"/> instance.
     /// </remarks>
     /// <exception cref="OperationCanceledException">
     /// The task was canceled.
