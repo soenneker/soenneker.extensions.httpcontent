@@ -31,7 +31,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\src\Soenneker.Extensions.HttpContent.csproj" />
+        <ProjectReference Include="..\..\src\Soenneker.Extensions.HttpContent.csproj" />
     </ItemGroup>
 
 </Project>
