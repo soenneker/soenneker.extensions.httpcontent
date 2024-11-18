@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>net8</TargetFrameworks>
+        <TargetFrameworks>net9.0</TargetFrameworks>
         <Nullable>enable</Nullable>
         <Platforms>AnyCPU</Platforms>
         <NoWarn>$(NoWarn);1591</NoWarn>
@@ -42,7 +42,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Soenneker.Extensions.Stream" Version="2.1.42" />
+      <PackageReference Include="Soenneker.Extensions.Stream" Version="3.0.43" />
       <PackageReference Include="Soenneker.Extensions.Task" Version="3.0.67" />
     </ItemGroup>
 </Project>
