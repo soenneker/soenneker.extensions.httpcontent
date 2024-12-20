@@ -1,13 +1,12 @@
-using Soenneker.Tests.FixturedUnit;
+using Soenneker.Tests.Unit;
 using Xunit;
-
 
 namespace Soenneker.Extensions.HttpContent.Tests;
 
-[Collection("Collection")]
-public class HttpContentExtensionTests : FixturedUnitTest
+public class HttpContentExtensionTests : UnitTest
 {
-    public HttpContentExtensionTests(Fixture fixture, ITestOutputHelper output) : base(fixture, output)
+    [Fact]
+    public void Default()
     {
 
     }
