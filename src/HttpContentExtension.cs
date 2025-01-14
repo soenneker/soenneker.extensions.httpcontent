@@ -35,7 +35,7 @@ public static class HttpContentExtension
     /// </exception>
     public static async ValueTask<System.Net.Http.HttpContent?> Clone(this System.Net.Http.HttpContent? content, CancellationToken cancellationToken = default)
     {
-        if (content == null)
+        if (content is null)
             return null;
 
         var ms = new System.IO.MemoryStream();
@@ -76,7 +76,7 @@ public static class HttpContentExtension
     {
         string domain;
 
-        if (path == null && Uri.TryCreate(domainOrUri, UriKind.Absolute, out Uri? uri))
+        if (path is null && Uri.TryCreate(domainOrUri, UriKind.Absolute, out Uri? uri))
         {
             domain = uri.Host;
             path ??= uri.AbsolutePath;
