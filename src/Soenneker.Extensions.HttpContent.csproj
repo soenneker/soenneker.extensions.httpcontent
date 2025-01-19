@@ -42,7 +42,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Soenneker.Extensions.Stream" Version="3.0.59" />
+      <PackageReference Include="Soenneker.Extensions.Stream" Version="3.0.61" />
       <PackageReference Include="Soenneker.Extensions.Task" Version="3.0.85" />
     </ItemGroup>
 </Project>
