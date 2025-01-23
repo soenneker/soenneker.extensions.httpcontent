@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Soenneker.Extensions.Stream;
 using Soenneker.Extensions.Task;
 
@@ -97,5 +98,29 @@ public static class HttpContentExtension
             .Append(path);
 
         content.Headers.Add("Cookie", cookieBuilder.ToString());
+    }
+
+    /// <summary>
+    /// Asynchronously logs the content of an <see cref="System.Net.Http.HttpContent"/> instance using the provided <see cref="ILogger"/>.
+    /// </summary>
+    /// <param name="content">
+    /// The <see cref="System.Net.Http.HttpContent"/> to be logged.
+    /// </param>
+    /// <param name="logger">
+    /// The <see cref="ILogger"/> instance used to log the content.
+    /// </param>
+    /// <returns>
+    /// A <see cref="ValueTask"/> representing the asynchronous operation.
+    /// </returns>
+    /// <remarks>
+    /// This method reads the HTTP content as a string asynchronously and logs it with a debug-level severity. 
+    /// It utilizes dependency injection for the <see cref="ILogger"/> to ensure structured logging.
+    /// Ensure the <see cref="HttpContent"/> is not disposed before calling this method.
+    /// </remarks>
+    public static async ValueTask Log(this System.Net.Http.HttpContent content, ILogger logger)
+    {
+        string log = await content.ReadAsStringAsync().NoSync();
+
+        logger.LogDebug("{log}", log);
     }
 }
