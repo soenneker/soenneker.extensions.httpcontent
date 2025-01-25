@@ -109,6 +109,7 @@ public static class HttpContentExtension
     /// <param name="logger">
     /// The <see cref="ILogger"/> instance used to log the content.
     /// </param>
+    /// <param name="cancellationToken"></param>
     /// <returns>
     /// A <see cref="ValueTask"/> representing the asynchronous operation.
     /// </returns>
@@ -117,9 +118,9 @@ public static class HttpContentExtension
     /// It utilizes dependency injection for the <see cref="ILogger"/> to ensure structured logging.
     /// Ensure the <see cref="HttpContent"/> is not disposed before calling this method.
     /// </remarks>
-    public static async ValueTask Log(this System.Net.Http.HttpContent content, ILogger logger)
+    public static async ValueTask Log(this System.Net.Http.HttpContent content, ILogger logger, CancellationToken cancellationToken = default)
     {
-        string log = await content.ReadAsStringAsync().NoSync();
+        string log = await content.ReadAsStringAsync(cancellationToken).NoSync();
 
         logger.LogDebug("{log}", log);
     }
