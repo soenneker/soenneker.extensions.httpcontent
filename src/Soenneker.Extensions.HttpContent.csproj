@@ -44,6 +44,6 @@
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
       <PackageReference Include="Soenneker.Extensions.Stream" Version="3.0.78" />
-      <PackageReference Include="Soenneker.Extensions.Task" Version="3.0.89" />
+      <PackageReference Include="Soenneker.Extensions.Task" Version="3.0.91" />
     </ItemGroup>
 </Project>
