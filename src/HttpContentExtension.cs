@@ -1,13 +1,14 @@
+using Microsoft.Extensions.Logging;
+using Soenneker.Extensions.Stream;
+using Soenneker.Extensions.Task;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Soenneker.Extensions.Stream;
-using Soenneker.Extensions.Task;
 
 namespace Soenneker.Extensions.HttpContent;
 
@@ -92,14 +93,8 @@ public static class HttpContentExtension
             path ??= "/";
         }
 
-        StringBuilder cookieBuilder = new StringBuilder(cookieName.Length + cookieValue.Length + domain.Length + path.Length + 20)
-            .Append(cookieName)
-            .Append('=')
-            .Append(cookieValue)
-            .Append("; Domain=")
-            .Append(domain)
-            .Append("; Path=")
-            .Append(path);
+        StringBuilder cookieBuilder = new StringBuilder(cookieName.Length + cookieValue.Length + domain.Length + path.Length + 20).Append(cookieName).Append('=')
+            .Append(cookieValue).Append("; Domain=").Append(domain).Append("; Path=").Append(path);
 
         content.Headers.Add("Cookie", cookieBuilder.ToString());
     }
@@ -127,6 +122,14 @@ public static class HttpContentExtension
         string log = await content.ReadAsStringAsync(cancellationToken).NoSync();
 
         logger.LogDebug("{log}", log);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool ShouldUseStream(this System.Net.Http.HttpContent? content)
+    {
+        long? len = content?.Headers.ContentLength;
+        // Unknown size or big size => stream
+        return len is null or > _streamThresholdBytes;
     }
 
     /// <summary>
