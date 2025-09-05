@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -15,6 +16,8 @@ namespace Soenneker.Extensions.HttpContent;
 /// </summary>
 public static class HttpContentExtension
 {
+    private const int _streamThresholdBytes = 64 * 1024; // switch to stream for big/unknown bodies
+
     /// <summary>
     /// Clones the specified <see cref="System.Net.Http.HttpContent"/> instance asynchronously.
     /// </summary>
@@ -34,6 +37,7 @@ public static class HttpContentExtension
     /// <exception cref="OperationCanceledException">
     /// The task was canceled.
     /// </exception>
+    [Pure]
     public static async ValueTask<System.Net.Http.HttpContent?> Clone(this System.Net.Http.HttpContent? content, CancellationToken cancellationToken = default)
     {
         if (content is null)
@@ -123,5 +127,43 @@ public static class HttpContentExtension
         string log = await content.ReadAsStringAsync(cancellationToken).NoSync();
 
         logger.LogDebug("{log}", log);
+    }
+
+    /// <summary>
+    /// Attempts to eagerly materialize the content of an <see cref="System.Net.Http.HttpContent"/> into a byte array,
+    /// but only if the payload is small enough (below the internal threshold).
+    /// </summary>
+    /// <param name="content">The HTTP content to read from. If <c>null</c>, the result will be empty.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>
+    /// A <see cref="ReadOnlyMemory{T}"/> containing the content bytes if the content length is known and under
+    /// the configured threshold. If the content is <c>null</c>, has length zero, or is too large/unknown,
+    /// an empty <see cref="ReadOnlyMemory{T}"/> is returned to signal that the caller should use the streaming path.
+    /// </returns>
+    /// <remarks>
+    /// This method avoids unnecessary allocations by only materializing a byte array when the content length is
+    /// definitively small. For large or unknown content sizes, no data is read and the caller is expected
+    /// to handle it as a stream.
+    /// </remarks>
+    [Pure]
+    public static async ValueTask<ReadOnlyMemory<byte>> GetSmallContentBytes(this System.Net.Http.HttpContent? content, CancellationToken cancellationToken = default)
+    {
+        if (content is null)
+            return ReadOnlyMemory<byte>.Empty;
+
+        long? len = content.Headers.ContentLength;
+
+        if (len is 0)
+            return ReadOnlyMemory<byte>.Empty;
+
+        // Only materialize byte[] eagerly when we *know* it's small.
+        if (len <= _streamThresholdBytes)
+        {
+            byte[] bytes = await content.ReadAsByteArrayAsync(cancellationToken).NoSync();
+            return bytes;
+        }
+
+        // For unknown/large, signal the caller to use stream path by returning empty.
+        return ReadOnlyMemory<byte>.Empty;
     }
 }
