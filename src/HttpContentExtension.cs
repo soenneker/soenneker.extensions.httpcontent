@@ -46,17 +46,27 @@ public static class HttpContentExtension
 
         var ms = new System.IO.MemoryStream();
 
-        await content.CopyToAsync(ms, cancellationToken).NoSync();
-        ms.ToStart();
-
-        var result = new StreamContent(ms);
-
-        foreach (KeyValuePair<string, IEnumerable<string>> header in content.Headers)
+        try
         {
-            result.Headers.Add(header.Key, header.Value);
-        }
+            await content.CopyToAsync(ms, cancellationToken).NoSync();
+            ms.ToStart();
 
-        return result;
+            var result = new StreamContent(ms);
+            ms = null; // StreamContent now owns the stream
+
+            foreach (KeyValuePair<string, IEnumerable<string>> header in content.Headers)
+            {
+                result.Headers.Add(header.Key, header.Value);
+            }
+
+            return result;
+        }
+        catch
+        {
+            if (ms != null)
+                await ms.DisposeAsync();
+            throw;
+        }
     }
 
     /// <summary>
@@ -124,6 +134,13 @@ public static class HttpContentExtension
         logger.LogDebug("{log}", log);
     }
 
+    /// <summary>
+    /// Determines whether the specified HTTP content should be processed using a stream based on its content length.
+    /// </summary>
+    /// <remarks>Use this method to decide whether to handle HTTP content as a stream, which is recommended
+    /// for large or indeterminate content sizes to avoid excessive memory usage.</remarks>
+    /// <param name="content">The HTTP content to evaluate. May be null.</param>
+    /// <returns>true if the content length is unknown or exceeds the streaming threshold; otherwise, false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool ShouldUseStream(this System.Net.Http.HttpContent? content)
     {
