@@ -54,12 +54,21 @@ public static class HttpContentExtension
             var result = new StreamContent(ms);
             ms = null; // StreamContent now owns the stream
 
-            foreach (KeyValuePair<string, IEnumerable<string>> header in content.Headers)
+            try
             {
-                result.Headers.Add(header.Key, header.Value);
-            }
+                foreach (KeyValuePair<string, IEnumerable<string>> header in content.Headers)
+                {
+                    result.Headers.Add(header.Key, header.Value);
+                }
 
-            return result;
+                return result;
+            }
+            catch
+            {
+                // If header copying fails, dispose the StreamContent (which will dispose the stream)
+                result.Dispose();
+                throw;
+            }
         }
         catch
         {
