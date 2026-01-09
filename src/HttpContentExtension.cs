@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Soenneker.Utils.PooledStringBuilders;
 
 namespace Soenneker.Extensions.HttpContent;
 
@@ -48,7 +48,8 @@ public static class HttpContentExtension
 
         try
         {
-            await content.CopyToAsync(ms, cancellationToken).NoSync();
+            await content.CopyToAsync(ms, cancellationToken)
+                         .NoSync();
             ms.ToStart();
 
             var result = new StreamContent(ms);
@@ -104,7 +105,7 @@ public static class HttpContentExtension
         if (path is null && Uri.TryCreate(domainOrUri, UriKind.Absolute, out Uri? uri))
         {
             domain = uri.Host;
-            path ??= uri.AbsolutePath;
+            path = uri.AbsolutePath;
         }
         else
         {
@@ -112,10 +113,17 @@ public static class HttpContentExtension
             path ??= "/";
         }
 
-        StringBuilder cookieBuilder = new StringBuilder(cookieName.Length + cookieValue.Length + domain.Length + path.Length + 20).Append(cookieName).Append('=')
-            .Append(cookieValue).Append("; Domain=").Append(domain).Append("; Path=").Append(path);
+        using var psb = new PooledStringBuilder(cookieName.Length + cookieValue.Length + domain.Length + path!.Length + 20);
 
-        content.Headers.Add("Cookie", cookieBuilder.ToString());
+        psb.Append(cookieName);
+        psb.Append('=');
+        psb.Append(cookieValue);
+        psb.Append("; Domain=");
+        psb.Append(domain);
+        psb.Append("; Path=");
+        psb.Append(path);
+
+        content.Headers.Add("Cookie", psb.ToStringAndDispose());
     }
 
     /// <summary>
@@ -138,7 +146,8 @@ public static class HttpContentExtension
     /// </remarks>
     public static async ValueTask Log(this System.Net.Http.HttpContent content, ILogger logger, CancellationToken cancellationToken = default)
     {
-        string log = await content.ReadAsStringAsync(cancellationToken).NoSync();
+        string log = await content.ReadAsStringAsync(cancellationToken)
+                                  .NoSync();
 
         logger.LogDebug("{log}", log);
     }
@@ -175,7 +184,8 @@ public static class HttpContentExtension
     /// to handle it as a stream.
     /// </remarks>
     [Pure]
-    public static async ValueTask<ReadOnlyMemory<byte>> GetSmallContentBytes(this System.Net.Http.HttpContent? content, CancellationToken cancellationToken = default)
+    public static async ValueTask<ReadOnlyMemory<byte>> GetSmallContentBytes(this System.Net.Http.HttpContent? content,
+        CancellationToken cancellationToken = default)
     {
         if (content is null)
             return ReadOnlyMemory<byte>.Empty;
@@ -188,7 +198,8 @@ public static class HttpContentExtension
         // Only materialize byte[] eagerly when we *know* it's small.
         if (len <= _streamThresholdBytes)
         {
-            byte[] bytes = await content.ReadAsByteArrayAsync(cancellationToken).NoSync();
+            byte[] bytes = await content.ReadAsByteArrayAsync(cancellationToken)
+                                        .NoSync();
             return bytes;
         }
 
