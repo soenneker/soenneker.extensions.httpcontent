@@ -2,13 +2,18 @@ using Microsoft.Extensions.Logging;
 using Soenneker.Extensions.Stream;
 using Soenneker.Extensions.Task;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
+using System.IO;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Soenneker.Utils.PooledStringBuilders;
+using Soenneker.Utils.MemoryStream.Abstract;
+using Soenneker.Extensions.ValueTask;
+using Soenneker.HttpContents.PooledByteArrays;
 
 namespace Soenneker.Extensions.HttpContent;
 
@@ -18,11 +23,13 @@ namespace Soenneker.Extensions.HttpContent;
 public static class HttpContentExtension
 {
     private const int _streamThresholdBytes = 64 * 1024; // switch to stream for big/unknown bodies
+    private const int _pooledCloneMaxBytes = 256 * 1024; // avoid huge ArrayPool rents
 
     /// <summary>
     /// Clones the specified <see cref="System.Net.Http.HttpContent"/> instance asynchronously.
     /// </summary>
     /// <param name="content">The <see cref="System.Net.Http.HttpContent"/> instance to clone.</param>
+    /// <param name="memoryStreamUtil"></param>
     /// <param name="cancellationToken">
     /// A <see cref="CancellationToken"/> to observe while waiting for the task to complete.
     /// The default value is <see cref="CancellationToken.None"/>.
@@ -39,15 +46,109 @@ public static class HttpContentExtension
     /// The task was canceled.
     /// </exception>
     [Pure]
-    public static async ValueTask<System.Net.Http.HttpContent?> Clone(this System.Net.Http.HttpContent? content, CancellationToken cancellationToken = default)
+    public static async ValueTask<System.Net.Http.HttpContent?> Clone(this System.Net.Http.HttpContent? content, IMemoryStreamUtil? memoryStreamUtil = null,
+        CancellationToken cancellationToken = default)
     {
         if (content is null)
             return null;
 
-        var ms = new System.IO.MemoryStream();
+        // If we know the length, prefer a single byte[] + ByteArrayContent to avoid MemoryStream growth.
+        // This also makes the result trivially replayable for retry scenarios.
+        long? len = content.Headers.ContentLength;
+
+        if (len is > 0 and <= int.MaxValue)
+        {
+            // For small-ish payloads, rent from ArrayPool and return a replayable HttpContent that
+            // returns the buffer when disposed (reduces GC allocations under retry storms).
+            if (len <= _pooledCloneMaxBytes)
+            {
+                var expected = (int)len;
+                byte[] rented = ArrayPool<byte>.Shared.Rent(expected);
+
+                try
+                {
+                    System.IO.Stream s = await content.ReadAsStreamAsync(cancellationToken)
+                                                      .NoSync();
+
+                    int readTotal = 0;
+                    while (readTotal < expected)
+                    {
+                        int read = await s.ReadAsync(rented.AsMemory(readTotal, expected - readTotal), cancellationToken)
+                                          .ConfigureAwait(false);
+
+                        if (read == 0)
+                            break;
+
+                        readTotal += read;
+                    }
+
+                    // If Content-Length lied and there's more data, we refuse to truncate silently.
+                    if (readTotal == expected)
+                    {
+                        int extra = await s.ReadAsync(rented.AsMemory(0, 1), cancellationToken)
+                                           .ConfigureAwait(false);
+                        if (extra != 0)
+                            throw new InvalidOperationException("HttpContent content-length exceeded the declared Content-Length.");
+                    }
+
+                    var result = new PooledByteArrayContent(ArrayPool<byte>.Shared, rented, readTotal);
+                    rented = null!; // ownership transferred to result
+
+                    try
+                    {
+                        foreach (KeyValuePair<string, IEnumerable<string>> header in content.Headers)
+                            result.Headers.TryAddWithoutValidation(header.Key, header.Value);
+
+                        return result;
+                    }
+                    catch
+                    {
+                        result.Dispose();
+                        throw;
+                    }
+                }
+                finally
+                {
+                    if (rented is not null)
+                        ArrayPool<byte>.Shared.Return(rented);
+                }
+            }
+
+            // Larger payloads: keep the simpler allocation path (avoids giant pool rents).
+            byte[] bytes = await content.ReadAsByteArrayAsync(cancellationToken)
+                                        .NoSync();
+
+            var byteArrayContent = new ByteArrayContent(bytes);
+
+            try
+            {
+                foreach (KeyValuePair<string, IEnumerable<string>> header in content.Headers)
+                    byteArrayContent.Headers.TryAddWithoutValidation(header.Key, header.Value);
+
+                return byteArrayContent;
+            }
+            catch
+            {
+                byteArrayContent.Dispose();
+                throw;
+            }
+        }
+
+        // Fallback: unknown/very large => stream clone (still avoid growth when length is available and fits in int).
+        MemoryStream? ms = null;
 
         try
         {
+            if (memoryStreamUtil is not null)
+            {
+                ms = await memoryStreamUtil.Get(cancellationToken)
+                                           .NoSync();
+            }
+            else
+            {
+                ms = len is >= 0 and <= int.MaxValue ? new MemoryStream((int)len) : new MemoryStream();
+            }
+
             await content.CopyToAsync(ms, cancellationToken)
                          .NoSync();
             ms.ToStart();
@@ -58,9 +159,7 @@ public static class HttpContentExtension
             try
             {
                 foreach (KeyValuePair<string, IEnumerable<string>> header in content.Headers)
-                {
-                    result.Headers.Add(header.Key, header.Value);
-                }
+                    result.Headers.TryAddWithoutValidation(header.Key, header.Value);
 
                 return result;
             }
@@ -71,11 +170,10 @@ public static class HttpContentExtension
                 throw;
             }
         }
-        catch
+        finally
         {
             if (ms != null)
                 await ms.DisposeAsync();
-            throw;
         }
     }
 
@@ -144,7 +242,8 @@ public static class HttpContentExtension
     /// It utilizes dependency injection for the <see cref="ILogger"/> to ensure structured logging.
     /// Ensure the <see cref="HttpContent"/> is not disposed before calling this method.
     /// </remarks>
-    public static async ValueTask Log(this System.Net.Http.HttpContent content, ILogger logger, CancellationToken cancellationToken = default)
+    public static async System.Threading.Tasks.ValueTask Log(this System.Net.Http.HttpContent content, ILogger logger,
+        CancellationToken cancellationToken = default)
     {
         string log = await content.ReadAsStringAsync(cancellationToken)
                                   .NoSync();
