@@ -46,7 +46,7 @@
       <PackageReference Include="Soenneker.Extensions.Task" Version="4.0.111" />
       <PackageReference Include="Soenneker.Extensions.ValueTask" Version="4.0.104" />
       <PackageReference Include="Soenneker.HttpContents.PooledByteArrays" Version="4.0.1" />
-      <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1355" />
+      <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1356" />
       <PackageReference Include="Soenneker.Utils.PooledStringBuilders" Version="4.0.10" />
     </ItemGroup>
 </Project>
