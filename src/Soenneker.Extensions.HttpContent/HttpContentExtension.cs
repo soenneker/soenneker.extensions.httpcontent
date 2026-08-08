@@ -245,6 +245,9 @@ public static class HttpContentExtension
     public static async System.Threading.Tasks.ValueTask Log(this System.Net.Http.HttpContent content, ILogger logger,
         CancellationToken cancellationToken = default)
     {
+        if (!logger.IsEnabled(LogLevel.Debug))
+            return;
+
         string log = await content.ReadAsStringAsync(cancellationToken)
                                   .NoSync();
 
