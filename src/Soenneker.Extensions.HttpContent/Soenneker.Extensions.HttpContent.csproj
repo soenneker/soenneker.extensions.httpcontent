@@ -47,7 +47,7 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
         <PackageReference Include="Soenneker.Extensions.Stream" Version="4.0.137" />
         <PackageReference Include="Soenneker.HttpContents.PooledByteArrays" Version="4.0.15" />
-        <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1501" />
+        <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1502" />
         <PackageReference Include="Soenneker.Utils.PooledStringBuilders" Version="4.0.27" />
     </ItemGroup>
 </Project>
