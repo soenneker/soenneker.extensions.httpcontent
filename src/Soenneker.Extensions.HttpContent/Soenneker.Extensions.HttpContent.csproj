@@ -45,8 +45,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Soenneker.Extensions.Stream" Version="4.0.171" />
-        <PackageReference Include="Soenneker.HttpContents.PooledByteArrays" Version="4.0.28" />
-        <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1596" />
+        <PackageReference Include="Soenneker.Extensions.Stream" Version="4.0.173" />
+        <PackageReference Include="Soenneker.HttpContents.PooledByteArrays" Version="4.0.29" />
+        <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1599" />
     </ItemGroup>
 </Project>
